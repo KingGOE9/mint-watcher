@@ -53,7 +53,13 @@ async function reminderLoop(contract, forceTest) {
   for (let i = 1; i <= maxReminders; i++) {
     await sleep(interval);
 
-    const stillOpen = forceTest ? (i < maxReminders) : await contract.mintOpen();
+    let stillOpen;
+    try {
+      stillOpen = forceTest ? (i < maxReminders) : await contract.mintOpen();
+    } catch (err) {
+      console.error(`RPC call failed on reminder ${i}, assuming still open and retrying next cycle:`, err.message);
+      stillOpen = true; // fail-safe: keep reminding rather than silently stopping
+    }
 
     if (!stillOpen) {
       console.log("Mint closed during reminder loop. Notifying and stopping.");
