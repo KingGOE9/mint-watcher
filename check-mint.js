@@ -83,8 +83,8 @@ function saveState(mintOpen) {
 }
 
 async function notify(open, isReminder) {
-  if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) {
-    console.log("Telegram credentials not set, skipping notification.");
+  if (!TELEGRAM_TOKEN) {
+    console.log("Telegram token not set, skipping notification.");
     return;
   }
 
@@ -92,14 +92,18 @@ async function notify(open, isReminder) {
     ? `⏰ *Reminder: mint is still OPEN* — go mint now!\nContract: \`${CONTRACT_ADDRESS}\``
     : `🐱 *Mint status changed:* ${open ? "🟢 OPEN" : "🔴 CLOSED"}\nContract: \`${CONTRACT_ADDRESS}\``;
 
-  const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: "Markdown" })
-  });
+  const chatIds = [TELEGRAM_CHAT_ID, process.env.TELEGRAM_GROUP_CHAT_ID].filter(Boolean);
 
-  if (!res.ok) {
-    console.error("Telegram send failed:", res.status, await res.text());
+  for (const chatId of chatIds) {
+    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" })
+    });
+
+    if (!res.ok) {
+      console.error(`Telegram send failed for chat ${chatId}:`, res.status, await res.text());
+    }
   }
 }
 
