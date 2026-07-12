@@ -8,8 +8,8 @@ const STATE_FILE = "state.json";
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-const REMINDER_INTERVAL_MS = 30_000;
-const MAX_REMINDERS = 20; // 20 * 30s = 10 minutes safety cap
+const REMINDER_INTERVAL_MS = 10_000;
+const MAX_REMINDERS = 120; // 120 * 10s = 20 minutes safety cap
 
 const abi = ["function mintOpen() view returns (bool)"];
 
