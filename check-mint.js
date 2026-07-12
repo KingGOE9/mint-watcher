@@ -21,13 +21,15 @@ async function main() {
   const provider = new ethers.JsonRpcProvider(RPC_URL);
   const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
 
-  const currentState = await contract.mintOpen();
+  const forceTest = process.env.FORCE_TEST_MODE === "true";
+
+  const currentState = forceTest ? true : await contract.mintOpen();
   let lastState = null;
   if (fs.existsSync(STATE_FILE)) {
     lastState = JSON.parse(fs.readFileSync(STATE_FILE, "utf8")).mintOpen;
   }
 
-  console.log(`Current: ${currentState}, Last known: ${lastState}`);
+  console.log(`Current: ${currentState}, Last known: ${lastState}${forceTest ? " (FORCED TEST MODE)" : ""}`);
 
   if (currentState !== lastState) {
     console.log("State changed! Sending notification...");
@@ -38,17 +40,20 @@ async function main() {
   }
 
   if (currentState === true) {
-    await reminderLoop(contract);
+    await reminderLoop(contract, forceTest);
   }
 }
 
-async function reminderLoop(contract) {
+async function reminderLoop(contract, forceTest) {
   console.log("Entering reminder loop (mint is open)...");
 
-  for (let i = 1; i <= MAX_REMINDERS; i++) {
-    await sleep(REMINDER_INTERVAL_MS);
+  const interval = forceTest ? 5_000 : REMINDER_INTERVAL_MS;
+  const maxReminders = forceTest ? 3 : MAX_REMINDERS;
 
-    const stillOpen = await contract.mintOpen();
+  for (let i = 1; i <= maxReminders; i++) {
+    await sleep(interval);
+
+    const stillOpen = forceTest ? (i < maxReminders) : await contract.mintOpen();
 
     if (!stillOpen) {
       console.log("Mint closed during reminder loop. Notifying and stopping.");
@@ -57,11 +62,11 @@ async function reminderLoop(contract) {
       return;
     }
 
-    console.log(`Reminder ${i}/${MAX_REMINDERS}`);
+    console.log(`Reminder ${i}/${maxReminders}`);
     await notify(true, true);
   }
 
-  console.log("Reminder loop safety cap reached. Exiting (next trigger will resume checks).");
+  console.log("Reminder loop safety cap reached.");
 }
 
 function saveState(mintOpen) {
